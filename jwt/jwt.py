@@ -4,7 +4,6 @@ from __future__ import absolute_import
 import json
 
 from jwt.exceptions import (
-    KeyNotFound,
     MalformedJWT,
     UnsupportedAlgorithm,
 )
@@ -36,47 +35,54 @@ class JWT(Impl):
         return self.jws.sign(alg, message, kid)
 
     def verify(self, jwt):
-        assert isinstance(jwt, str)
+        try:
+            if not isinstance(jwt, bytes):
+                jwt = jwt.encode('ascii')
+        except UnicodeEncodeError:
+            raise MalformedJWT('JWT must be encoded in ascii')
 
-        encoded_header, rest = jwt.split('.', 1)
-        headerobj = json.loads(b64_decode(encoded_header).decode('utf8'))
+        encoded_header, rest = jwt.split(b'.', 1)
+        headerobj = json.loads(b64_decode(encoded_header).decode('ascii'))
         impl = self._get_impl(headerobj['alg'])
 
         if headerobj.get('cty') == 'JWT':
             jwt = impl.decode(headerobj, rest)
-            return self.verify(str(jwt.decode('utf8')))
+            return self.verify(jwt)
 
         return impl.verify(headerobj, encoded_header, rest)
 
     def encode(self, headerobj, payload):
         assert isinstance(headerobj, dict)
-        assert isinstance(payload, bytes)
+        if not isinstance(payload, bytes):
+            raise TypeError('payload must be a bytes')
 
         try:
             impl = self._get_impl(headerobj['alg'])
-        except KeyError as why:
+        except KeyError:
             raise MalformedJWT('\'alg\' is required')
 
         encoded_header = b64_encode(self._json_encode(headerobj))
-
         return '.'.join((
             encoded_header,
             impl.encode(headerobj, encoded_header, payload)
         ))
 
     def decode(self, jwt):
-        assert isinstance(jwt, str)
+        try:
+            if not isinstance(jwt, bytes):
+                jwt = jwt.encode('ascii')
 
-        encoded_header, rest = jwt.split('.', 1)
-        headerobj = json.loads(b64_decode(encoded_header).decode('utf8'))
+            encoded_header, rest = jwt.split(b'.', 1)
+            headerobj = json.loads(b64_decode(encoded_header).decode('ascii'))
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            raise MalformedJWT('JWT must be encoded in ascii')
+
         impl = self._get_impl(headerobj['alg'])
-
         if not impl.verify(headerobj, encoded_header, rest):
             raise MalformedJWT()
 
         payload = impl.decode(headerobj, rest)
-
         if headerobj.get('cty') == 'JWT':
-            return self.decode(str(payload.decode('utf8')))
+            return self.decode(payload)
 
         return payload

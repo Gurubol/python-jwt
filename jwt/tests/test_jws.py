@@ -227,21 +227,21 @@ class TestJWS(unittest.TestCase):
         from jwt.exceptions import MalformedJWT
 
         inst = self.target(self.keys)
-        encoded_payload = 'eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQog' +\
-                          'Imh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ'
+        encoded_payload = b'eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQog' +\
+                          b'Imh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ'
 
         headerobj = dict(alg='HS256', typ='JWT')
-        encoded_header = 'eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9'
-        encoded_signature = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'
+        encoded_header = b'eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9'
+        encoded_signature = b'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'
 
         self.assertTrue(inst.verify(
             headerobj, encoded_header,
-            '.'.join((encoded_payload, encoded_signature))
+            b'.'.join((encoded_payload, encoded_signature))
         ))
 
         self.assertFalse(inst.verify(
             headerobj, encoded_header,
-            '{payload}.dummysignature'.format(payload=encoded_payload)))
+            b'.'.join((encoded_payload, b'dummysignature'))))
 
         with self.assertRaises(MalformedJWT):
             inst.verify(headerobj, encoded_header, encoded_signature)
@@ -260,7 +260,7 @@ class TestJWS(unittest.TestCase):
                             'igcN_IoypGlUPQGe77Rw'
         self.assertTrue(inst.verify(
             headerobj, encoded_header,
-            '.'.join((encoded_payload, encoded_signature))))
+            '.'.join((encoded_payload, encoded_signature)).encode('ascii')))
 
     def test_encode(self):
         inst = self.target(self.keys)
@@ -269,7 +269,7 @@ class TestJWS(unittest.TestCase):
                   b'"http://example.com/is_root":true}'
 
         headerobj = dict(alg='HS256', typ='JWT')
-        encoded_header = 'eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9'
+        encoded_header = b'eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9'
         self.assertEqual(
             inst.encode(headerobj, encoded_header, payload),
             'eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtc'
@@ -300,14 +300,14 @@ class TestJWS(unittest.TestCase):
                           'Imh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ'
 
         with self.assertRaises(MalformedJWT):
-            inst.decode({'alg': 'none'}, encoded_payload)
+            inst.decode({'alg': 'none'}, encoded_payload.encode('ascii'))
 
         headerobj = dict(alg='HS256', typ='JWT')
-        encoded_signature = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'
+        encoded_signature = b'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'
         self.assertEqual(
             inst.decode(headerobj, '{payload}.{signature}'.format(
                 payload=encoded_payload, signature=encoded_signature
-            )),
+            ).encode('ascii')),
             payload)
 
         headerobj = dict(alg='RS256')
@@ -324,5 +324,5 @@ class TestJWS(unittest.TestCase):
         self.assertEqual(
             inst.decode(headerobj, '{payload}.{signature}'.format(
                 payload=encoded_payload, signature=encoded_signature
-            )),
+            ).encode('ascii')),
             payload)

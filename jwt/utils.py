@@ -13,7 +13,7 @@ def b64_encode(source):
         source = source.encode('ascii')
 
     encoded = base64.urlsafe_b64encode(source).replace(b'=', b'')
-    return str(encoded.decode('ascii'))
+    return encoded.decode('ascii')
 
 
 def b64_decode(source):

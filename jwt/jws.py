@@ -42,7 +42,7 @@ class JWS(Impl):
     def get_signer(self, alg):
         try:
             return self.REGISTRY[alg]
-        except KeyError as why:
+        except KeyError:
             raise UnsupportedAlgorithm(alg)
 
     def get_key(self, alg, kid=None, needs_private=False):
@@ -66,17 +66,19 @@ class JWS(Impl):
         return signer.sign(key.keyobj, message)
 
     def _signing_message(self, encoded_header, encoded_payload):
-        return '.'.join((encoded_header, encoded_payload)).encode('ascii')
+        if not isinstance(encoded_header, bytes):
+            encoded_header = encoded_header.encode('ascii')
+
+        if not isinstance(encoded_payload, bytes):
+            encoded_payload = encoded_payload.encode('ascii')
+
+        return b'.'.join((encoded_header, encoded_payload))
 
     def verify(self, headerobj, encoded_header, rest):
-        assert isinstance(headerobj, dict)
-        assert isinstance(encoded_header, str)
-        assert isinstance(rest, str)
-
         try:
-            encoded_payload, encoded_signature = rest.split('.')
+            encoded_payload, encoded_signature = rest.split(b'.')
             signature = b64_decode(encoded_signature)
-        except ValueError as why:
+        except ValueError:
             raise MalformedJWT()
         else:
             msg = self._signing_message(encoded_header, encoded_payload)
@@ -89,10 +91,6 @@ class JWS(Impl):
             return signer.verify(key.keyobj, msg, signature)
 
     def encode(self, headerobj, encoded_header, payload):
-        assert isinstance(headerobj, dict)
-        assert isinstance(encoded_header, str)
-        assert isinstance(payload, bytes)
-
         encoded_payload = b64_encode(payload)
         encoded_signature = b64_encode(self.sign(
             headerobj['alg'],
@@ -102,13 +100,10 @@ class JWS(Impl):
         return '.'.join((encoded_payload, encoded_signature))
 
     def decode(self, headerobj, rest):
-        assert isinstance(headerobj, dict)
-        assert isinstance(rest, str)
-
         try:
-            encoded_payload, _ = rest.split('.')
+            encoded_payload, _ = rest.split(b'.')
             return b64_decode(encoded_payload)
-        except ValueError as why:
+        except ValueError:
             raise MalformedJWT()
 
     @classmethod
