@@ -61,7 +61,7 @@ class JWT(Impl):
         except KeyError:
             raise MalformedJWT('\'alg\' is required')
 
-        encoded_header = b64_encode(self._json_encode(headerobj))
+        encoded_header = b64_encode(json.dumps(headerobj).encode('ascii'))
         return '.'.join((
             encoded_header,
             impl.encode(headerobj, encoded_header, payload)
