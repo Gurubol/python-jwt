@@ -9,9 +9,6 @@ if sys.version_info[0] == 3:
 
 
 def b64_encode(source):
-    if not isinstance(source, bytes):
-        source = source.encode('ascii')
-
     encoded = base64.urlsafe_b64encode(source).replace(b'=', b'')
     return encoded.decode('ascii')
 
@@ -25,9 +22,6 @@ def b64_decode(source):
 
 
 def base64_to_int(source):
-    if not isinstance(source, bytes):
-        source = source.encode('ascii')
-
     result = 0
     for b in b64_decode(source):
         result = (result << 8) + ord(b)
